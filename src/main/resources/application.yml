@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: fhir-profile-server
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  # ─── OAuth2 JWT Resource Server ───────────────────────────────────────────
+  # Override AAA_JWKS_URI / AAA_ISSUER_URI to switch providers without code changes.
+  # When issuer-uri is set, Spring auto-discovers JWKS via OIDC discovery endpoint.
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}
+          jwk-set-uri: ${AAA_JWKS_URI:http://localhost:8180/realms/fhir/protocol/openid-connect/certs}
+
+# ─── Custom RBAC + SMART configuration ─────────────────────────────────────
+fhir:
+  rbac:
+    # Dot-notation JWT claim path for roles list.
+    # Keycloak realm:     realm_access.roles
+    # Keycloak client:    resource_access.fhir-server.roles
+    # Auth0 / Azure:      roles
+    # Okta:               groups
+    # AWS Cognito:        cognito:groups
+    roles-claim: ${RBAC_ROLES_CLAIM:realm_access.roles}
+
+    # JWT claim containing the SMART scope string (space-separated)
+    scope-claim: ${RBAC_SCOPE_CLAIM:scope}
+
+    # JWT claim with the SMART patient context ID (SMART App Launch IG)
+    patient-claim: ${RBAC_PATIENT_CLAIM:patient}
+
+    # Fallback path for patient ID (some older Keycloak SMART plugins use this)
+    patient-claim-fallback: ${RBAC_PATIENT_CLAIM_FALLBACK:launch_context.patient}
+
+    # Also look up role assignments from the local DB
+    db-roles-enabled: ${RBAC_DB_ROLES_ENABLED:true}
+
+# ─── Actuator ────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ─── SpringDoc / Swagger UI ──────────────────────────────────────────────────
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout('Roles', ~{::content})}">
+<body>
+<th:block th:fragment="content">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0">
+      Manage RBAC roles and their SMART-on-FHIR scope assignments.
+    </p>
+    <a href="/admin/roles/new" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i> New Role
+    </a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Name</th>
+            <th>Context</th>
+            <th>Scopes</th>
+            <th>Type</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="role : ${roles}">
+            <td>
+              <strong th:text="${role.name}"></strong>
+            </td>
+            <td>
+              <span th:text="${role.smartContext}" class="badge bg-secondary"></span>
+            </td>
+            <td>
+              <span class="badge bg-info text-dark" th:text="${role.scopeCount}"></span> scopes
+            </td>
+            <td>
+              <span th:if="${role.builtIn}"  class="badge bg-warning text-dark badge-builtin">Built-in</span>
+              <span th:unless="${role.builtIn}" class="badge bg-light text-dark badge-builtin">Custom</span>
+            </td>
+            <td class="text-muted small" th:text="${#temporals.format(role.createdAt, 'yyyy-MM-dd')}"></td>
+            <td>
+              <a th:href="@{/admin/roles/{id}/scopes(id=${role.id})}"
+                 class="btn btn-outline-primary btn-sm me-1" title="Manage scopes">
+                <i class="bi bi-key"></i> Scopes
+              </a>
+              <a th:href="@{/admin/roles/{id}/edit(id=${role.id})}"
+                 class="btn btn-outline-secondary btn-sm me-1" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form th:unless="${role.builtIn}"
+                    th:action="@{/admin/roles/{id}/delete(id=${role.id})}"
+                    method="post" class="d-inline"
+                    onsubmit="return confirm('Delete role ' + this.dataset.name + '?')"
+                    th:data-name="${role.name}">
+                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(roles)}">
+            <td colspan="6" class="text-center text-muted py-4">No roles found.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</th:block>
+</body>
+</html>

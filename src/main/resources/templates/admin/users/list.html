@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout('Users', ~{::content})}">
+<body>
+<th:block th:fragment="content">
+
+  <p class="text-muted">
+    Users are identified by their JWT <code>sub</code> claim.
+    Click a subject to manage their role assignments.
+  </p>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>JWT Subject</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr th:each="sub : ${subjects}">
+            <td>
+              <i class="bi bi-person-circle me-1 text-secondary"></i>
+              <code th:text="${sub}"></code>
+            </td>
+            <td>
+              <a th:href="@{/admin/users/{userId}/roles(userId=${sub})}"
+                 class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-person-badge me-1"></i> Roles
+              </a>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(subjects)}">
+            <td colspan="2" class="text-center text-muted py-4">
+              No user role assignments yet.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</th:block>
+</body>
+</html>

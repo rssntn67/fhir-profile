@@ -1,0 +1,70 @@
+# ── Maven ────────────────────────────────────────────────────────────────────
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ── IDE — IntelliJ IDEA ──────────────────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# ── IDE — Eclipse ────────────────────────────────────────────────────────────
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+bin/
+
+# ── IDE — VS Code ────────────────────────────────────────────────────────────
+.vscode/
+
+# ── IDE — NetBeans ───────────────────────────────────────────────────────────
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ── Spring Boot ──────────────────────────────────────────────────────────────
+spring-shell.log
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Environment / secrets ────────────────────────────────────────────────────
+.env
+*.env.local
+*.pem
+*.key
+*.p12
+*.jks
+*.pfx
+
+# ── Docker ───────────────────────────────────────────────────────────────────
+# Keep docker-compose.yml tracked; ignore local override files
+docker-compose.override.yml
+
+# ── Keycloak realm export (may contain secrets if exported with credentials) ─
+keycloak/realm-export.json
+
+# ── H2 on-disk databases (dev only) ─────────────────────────────────────────
+*.db
+*.mv.db
+*.trace.db

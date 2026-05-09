@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout('User Role Assignments', ~{::content})}">
+<body>
+<th:block th:fragment="content">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/users">Users</a></li>
+      <li class="breadcrumb-item active"><code th:text="${userId}"></code></li>
+    </ol>
+  </nav>
+
+  <div class="row g-4">
+
+    <!-- Active assignments -->
+    <div class="col-md-7">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <i class="bi bi-person-badge me-1"></i> Active Roles
+        </div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between align-items-center"
+              th:each="a : ${assignments}">
+            <div>
+              <strong th:text="${a.roleName}"></strong>
+              <small class="text-muted ms-2">
+                assigned by <span th:text="${a.assignedBy}"></span>
+                on <span th:text="${#temporals.format(a.assignedAt, 'yyyy-MM-dd')}"></span>
+              </small>
+            </div>
+            <form th:action="@{/admin/users/{uid}/roles/{aid}/revoke(uid=${userId},aid=${a.id})}"
+                  method="post"
+                  sec:authorize="hasRole('SUPER_ADMIN')">
+              <button type="submit" class="btn btn-outline-danger btn-sm"
+                      onclick="return confirm('Revoke this role assignment?')">
+                <i class="bi bi-x-circle me-1"></i> Revoke
+              </button>
+            </form>
+          </li>
+          <li class="list-group-item text-muted text-center py-3"
+              th:if="${#lists.isEmpty(assignments)}">
+            No active roles.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Assign role -->
+    <div class="col-md-5">
+      <div class="card shadow-sm">
+        <div class="card-header"><i class="bi bi-plus-circle me-1"></i> Assign Role</div>
+        <div class="card-body">
+          <form th:action="@{/admin/users/{uid}/roles(uid=${userId})}" method="post">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Role</label>
+              <select name="roleId" class="form-select form-select-sm" required>
+                <option value="">— Select role —</option>
+                <option th:each="r : ${allRoles}"
+                        th:value="${r.id}"
+                        th:text="${r.name + (r.builtIn ? ' ★' : '')}">
+                </option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm w-100">
+              <i class="bi bi-person-plus me-1"></i> Assign
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</th:block>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout('Edit Role', ~{::content})}">
+<body>
+<th:block th:fragment="content">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/admin/roles">Roles</a></li>
+      <li class="breadcrumb-item active" th:text="${roleDto.name}">Role</li>
+    </ol>
+  </nav>
+
+  <div th:if="${roleDto.builtIn}" class="alert alert-warning mb-3">
+    <i class="bi bi-lock me-1"></i>
+    <strong>Built-in role:</strong> the name cannot be changed. Only the description can be edited.
+  </div>
+
+  <div class="card shadow-sm" style="max-width:600px">
+    <div class="card-body">
+      <form th:action="@{/admin/roles/{id}(id=${roleDto.id})}" th:object="${roleDto}"
+            method="post" novalidate>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Role Name</label>
+          <input type="text" th:field="*{name}" class="form-control"
+                 th:readonly="${roleDto.builtIn}" th:classappend="${roleDto.builtIn} ? 'bg-light'"/>
+        </div>
+
+        <div class="mb-3">
+          <label for="description" class="form-label fw-semibold">Description</label>
+          <textarea id="description" th:field="*{description}" class="form-control" rows="2"
+                    th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"></textarea>
+          <div class="invalid-feedback" th:errors="*{description}"></div>
+        </div>
+
+        <div class="mb-4" th:unless="${roleDto.builtIn}">
+          <label class="form-label fw-semibold">Dominant SMART Context</label>
+          <select th:field="*{smartContext}" class="form-select">
+            <option value="">— Select —</option>
+            <option th:each="ctx : ${contexts}" th:value="${ctx}" th:text="${ctx}"></option>
+          </select>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <a href="/admin/roles" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</th:block>
+</body>
+</html>
