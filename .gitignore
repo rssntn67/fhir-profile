@@ -64,6 +64,9 @@ docker-compose.override.yml
 # ── Keycloak realm export (may contain secrets if exported with credentials) ─
 keycloak/realm-export.json
 
+# ── Claude Code ──────────────────────────────────────────────────────────────
+.claude/
+
 # ── H2 on-disk databases (dev only) ─────────────────────────────────────────
 *.db
 *.mv.db
