@@ -1,0 +1,179 @@
+{
+  "id": "fhir",
+  "realm": "fhir",
+  "displayName": "FHIR RBAC Dev Realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+
+  "roles": {
+    "realm": [
+      {
+        "name": "SUPER_ADMIN",
+        "description": "Full unrestricted system access",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "fhir"
+      },
+      {
+        "name": "CLINICAL_ADMIN",
+        "description": "Clinical administration — read all, full write on patient/practitioner demographics",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "fhir"
+      },
+      {
+        "name": "PRACTITIONER",
+        "description": "Healthcare provider — full clinical CRUD, read-only patient demographics",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "fhir"
+      },
+      {
+        "name": "NURSE",
+        "description": "Nursing staff — observations and vitals, read clinical data",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "fhir"
+      },
+      {
+        "name": "PATIENT",
+        "description": "Patient self-access — read own compartment only",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "fhir"
+      },
+      {
+        "name": "READONLY",
+        "description": "Read-only access across all resources",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "fhir"
+      }
+    ]
+  },
+
+  "clients": [
+    {
+      "clientId": "fhir-server",
+      "name": "FHIR RBAC Server",
+      "description": "Dev client — public, direct grants enabled for curl testing",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "protocolMappers": [
+        {
+          "name": "patient-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "patientId",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "patient",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@fhir.local",
+      "firstName": "System",
+      "lastName": "Administrator",
+      "credentials": [
+        { "type": "password", "value": "admin", "temporary": false }
+      ],
+      "realmRoles": ["SUPER_ADMIN"]
+    },
+    {
+      "username": "clinical.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "clinical.admin@fhir.local",
+      "firstName": "Clinical",
+      "lastName": "Administrator",
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "realmRoles": ["CLINICAL_ADMIN"]
+    },
+    {
+      "username": "dr.smith",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "dr.smith@fhir.local",
+      "firstName": "John",
+      "lastName": "Smith",
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "realmRoles": ["PRACTITIONER"]
+    },
+    {
+      "username": "nurse.jones",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "nurse.jones@fhir.local",
+      "firstName": "Mary",
+      "lastName": "Jones",
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "realmRoles": ["NURSE"]
+    },
+    {
+      "username": "patient.doe",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "patient.doe@fhir.local",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "attributes": {
+        "patientId": ["Patient/test-patient-001"]
+      },
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "realmRoles": ["PATIENT"]
+    },
+    {
+      "username": "readonly.user",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "readonly@fhir.local",
+      "firstName": "Read",
+      "lastName": "Only",
+      "credentials": [
+        { "type": "password", "value": "password", "temporary": false }
+      ],
+      "realmRoles": ["READONLY"]
+    }
+  ]
+}

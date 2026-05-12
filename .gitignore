@@ -61,8 +61,10 @@ Thumbs.db
 # Keep docker-compose.yml tracked; ignore local override files
 docker-compose.override.yml
 
-# ── Keycloak realm export (may contain secrets if exported with credentials) ─
-keycloak/realm-export.json
+# ── Keycloak ─────────────────────────────────────────────────────────────────
+# realm-export.json is intentionally tracked: it contains dev-only test
+# credentials (admin/admin, users/password) and no production secrets.
+# Do NOT commit a production realm export — use a secrets manager instead.
 
 # ── Claude Code ──────────────────────────────────────────────────────────────
 .claude/
