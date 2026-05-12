@@ -423,3 +423,51 @@ HTTP request
 1. Scopes in the JWT `scope` claim
 2. Scopes from DB roles whose names match the JWT roles claim
 3. Scopes from DB roles assigned to the user's `sub` in `fhir_user_role_assignments`
+
+---
+
+## Dependency Notes
+
+### HAPI FHIR: `hapi-fhir-server` not `hapi-fhir-jpaserver-base`
+
+This project uses `ca.uhn.hapi.fhir:hapi-fhir-server` (the plain REST server) rather than
+the full `hapi-fhir-jpaserver-base`. The distinction matters:
+
+| Artifact | Contains | Brings in |
+|---|---|---|
+| `hapi-fhir-jpaserver-base` | JPA resource storage, Hibernate Search, Flyway | ~150 MB dependency tree |
+| `hapi-fhir-server` ✓ | `RestfulServer`, `AuthorizationInterceptor`, `RuleBuilder` | ~15 MB dependency tree |
+
+This project provides **only the RBAC / security layer**. It does not store FHIR resources
+itself — resource persistence is intended to be added separately (register JPA resource
+providers against the same `RestfulServer`). Using the lighter artifact avoids three
+classpath conflicts that `hapi-fhir-jpaserver-base` introduces with Spring Boot 3.3.x:
+
+1. **Flyway autoconfiguration conflict** — `hapi-fhir-jpaserver-base` ships `flyway-core`,
+   causing Spring Boot's `FlywayAutoConfiguration` to activate and fight with Liquibase.
+   Mitigated in `application.yml` with `spring.flyway.enabled: false` as defence-in-depth.
+
+2. **Hibernate Search / jboss-logging version clash** — `hapi-fhir-jpaserver-base` 8.0.0
+   pulls `hibernate-search-util-common` 7.2.1 which requires `jboss-logging` ≥ 3.6, but
+   Spring Boot 3.3.5 manages it at 3.5.3. Eliminated by dropping the JPA server artifact.
+
+3. **Nimbus JOSE+JWT scoping** — declaring `nimbus-jose-jwt` explicitly with `scope=test`
+   overrides the transitive compile-scope entry from `spring-security-oauth2-jose`,
+   removing the class from the main classpath. The explicit declaration was removed; the
+   library is resolved transitively at the version Spring Boot manages.
+
+### JWT decoder: lazy JWKS fetch
+
+`SecurityConfig` builds the `JwtDecoder` via `NimbusJwtDecoder.withJwkSetUri()` (lazy —
+JWKS keys are fetched on the first token validation request, not at startup). Issuer
+validation is attached via `decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(...))`.
+
+This means the server starts cleanly even when the identity provider (Keycloak, Auth0, …)
+is not reachable — useful in dev and in environments where the IdP is on a separate network.
+
+### Metadata always public
+
+`GET /fhir/metadata` (the FHIR CapabilityStatement) is accessible without authentication.
+Spring Security permits it via `requestMatchers("/fhir/metadata").permitAll()`, and
+`SmartAuthorizationInterceptor` emits an explicit `allow().metadata()` rule even when no
+JWT is present, so HAPI's own authorization layer also lets it through.
