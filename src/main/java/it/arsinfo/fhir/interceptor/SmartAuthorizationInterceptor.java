@@ -50,8 +50,12 @@ public class SmartAuthorizationInterceptor extends AuthorizationInterceptor {
         Optional<Jwt> jwtOpt = extractJwt();
 
         if (jwtOpt.isEmpty()) {
-            log.debug("No JWT found in SecurityContext — denying request to {}", theRequestDetails.getRequestPath());
-            return new RuleBuilder().denyAll("No authenticated principal").build();
+            log.debug("No JWT found in SecurityContext — allowing only metadata, denying rest");
+            return new RuleBuilder()
+                    .allow("r-anon-metadata").metadata()
+                    .andThen()
+                    .denyAll("No authenticated principal")
+                    .build();
         }
 
         Jwt jwt = jwtOpt.get();

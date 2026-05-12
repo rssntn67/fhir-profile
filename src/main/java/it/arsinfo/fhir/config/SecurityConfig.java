@@ -10,7 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtDecoders;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -87,18 +87,16 @@ public class SecurityConfig {
     }
 
     /**
-     * JwtDecoder configured from application.yml spring.security.oauth2.resourceserver.jwt.*
-     * Uses NimbusJwtDecoder with JWKS URI — works for any OIDC/OAuth2 provider.
-     * Issuer validation is automatic when issuer-uri is set.
+     * JwtDecoder built from jwk-set-uri (lazy key fetch — no startup call to the IdP).
+     * Issuer validation is wired separately so the server starts even when Keycloak is down.
      */
     @Bean
     public JwtDecoder jwtDecoder(OAuth2ResourceServerProperties properties) {
         var jwt = properties.getJwt();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwt.getJwkSetUri()).build();
         if (jwt.getIssuerUri() != null && !jwt.getIssuerUri().isBlank()) {
-            // Uses OIDC discovery to resolve JWKS URI automatically
-            return JwtDecoders.fromIssuerLocation(jwt.getIssuerUri());
+            decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(jwt.getIssuerUri()));
         }
-        // Fallback: explicit JWKS URI (no issuer validation)
-        return NimbusJwtDecoder.withJwkSetUri(jwt.getJwkSetUri()).build();
+        return decoder;
     }
 }

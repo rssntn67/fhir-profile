@@ -12,6 +12,11 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
 
+  # hapi-fhir-jpaserver-base ships flyway-core; disable Boot's autoconfiguration
+  # so it doesn't conflict with Liquibase. HAPI's internal Flyway (if any) is unaffected.
+  flyway:
+    enabled: false
+
   # ─── OAuth2 JWT Resource Server ───────────────────────────────────────────
   # Override AAA_JWKS_URI / AAA_ISSUER_URI to switch providers without code changes.
   # When issuer-uri is set, Spring auto-discovers JWKS via OIDC discovery endpoint.

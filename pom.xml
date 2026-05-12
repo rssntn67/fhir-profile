@@ -32,17 +32,13 @@
   <dependencies>
 
     <!-- ===== HAPI FHIR ===== -->
+    <!-- Plain server: RestfulServer + AuthorizationInterceptor + RuleBuilder.
+         No JPA storage, no Hibernate Search, no Flyway — we only need the
+         interceptor layer on top of our own Spring Data JPA RBAC entities. -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-jpaserver-base</artifactId>
+      <artifactId>hapi-fhir-server</artifactId>
       <version>${hapi-fhir.version}</version>
-      <exclusions>
-        <!-- Exclude logback-classic to avoid conflicts with Spring Boot logging -->
-        <exclusion>
-          <groupId>ch.qos.logback</groupId>
-          <artifactId>logback-classic</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
@@ -137,14 +133,8 @@
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Nimbus JOSE JWT — available transitively from oauth2-resource-server,
-         listed explicitly so unit tests can create test JWTs -->
-    <dependency>
-      <groupId>com.nimbusds</groupId>
-      <artifactId>nimbus-jose-jwt</artifactId>
-      <version>9.37.3</version>
-      <scope>test</scope>
-    </dependency>
+    <!-- Nimbus JOSE JWT — provided transitively by spring-security-oauth2-jose;
+         no explicit declaration needed (test code uses the same transitive jar) -->
 
   </dependencies>
 
