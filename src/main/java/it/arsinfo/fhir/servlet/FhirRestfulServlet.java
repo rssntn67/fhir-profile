@@ -1,6 +1,7 @@
 package it.arsinfo.fhir.servlet;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.ResponseHighlighterInterceptor;
@@ -36,6 +37,9 @@ public class FhirRestfulServlet extends RestfulServer {
     protected void initialize() throws ServletException {
         setDefaultPrettyPrint(true);
         setDefaultResponseEncoding(ca.uhn.fhir.rest.api.EncodingEnum.JSON);
+
+        // Register all IResourceProvider beans from Spring context
+        registerProviders(applicationContext.getBeansOfType(IResourceProvider.class).values());
 
         // Request/response logging
         LoggingInterceptor loggingInterceptor = new LoggingInterceptor();

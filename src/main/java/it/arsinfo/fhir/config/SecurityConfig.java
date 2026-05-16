@@ -13,6 +13,8 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
 /**
  * Two independent filter chains:
@@ -36,17 +38,27 @@ public class SecurityConfig {
         this.rbacProperties   = rbacProperties;
     }
 
-    /** Chain 1: FHIR API + REST admin API — stateless, no CSRF. */
+    /**
+     * Chain 1: FHIR API + REST admin API — stateless, no CSRF.
+     *
+     * Uses AntPathRequestMatcher because the HAPI FHIR servlet is a plain
+     * jakarta.servlet.HttpServlet (not a Spring MVC controller). Spring Security 6
+     * defaults to MvcRequestMatcher which only matches paths routed through
+     * DispatcherServlet — it would never match /fhir/** and the BearerToken
+     * filter would silently skip all FHIR requests.
+     */
     @Bean
     @Order(1)
     public SecurityFilterChain fhirFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/fhir/**", "/api/**")
+            .securityMatcher(new OrRequestMatcher(
+                new AntPathRequestMatcher("/fhir/**"),
+                new AntPathRequestMatcher("/api/**")))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/fhir/metadata").permitAll()
-                .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "CLINICAL_ADMIN")
+                .requestMatchers(new AntPathRequestMatcher("/fhir/metadata")).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasAnyRole("SUPER_ADMIN", "CLINICAL_ADMIN")
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -60,9 +72,11 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain adminUiFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/admin/**", "/error/**")
+            .securityMatcher(new OrRequestMatcher(
+                new AntPathRequestMatcher("/admin/**"),
+                new AntPathRequestMatcher("/error/**")))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/error/**").permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/error/**")).permitAll()
                 .anyRequest().hasAnyRole("SUPER_ADMIN", "CLINICAL_ADMIN")
             )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -79,9 +93,13 @@ public class SecurityConfig {
     @Order(3)
     public SecurityFilterChain openFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/actuator/**", "/h2-console/**", "/swagger-ui/**", "/v3/api-docs/**")
+            .securityMatcher(new OrRequestMatcher(
+                new AntPathRequestMatcher("/actuator/**"),
+                new AntPathRequestMatcher("/h2-console/**"),
+                new AntPathRequestMatcher("/swagger-ui/**"),
+                new AntPathRequestMatcher("/v3/api-docs/**")))
             .csrf(csrf -> csrf.disable())
-            .headers(h -> h.frameOptions(fo -> fo.sameOrigin())) // needed for H2 console
+            .headers(h -> h.frameOptions(fo -> fo.sameOrigin()))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
