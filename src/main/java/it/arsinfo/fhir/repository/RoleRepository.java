@@ -14,6 +14,9 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     boolean existsByName(String name);
 
+    @Query("SELECT DISTINCT r FROM Role r LEFT JOIN FETCH r.scopes")
+    List<Role> findAllWithScopes();
+
     @Query("SELECT r FROM Role r LEFT JOIN FETCH r.scopes WHERE r.id = :id")
     Optional<Role> findByIdWithScopes(@Param("id") Long id);
 

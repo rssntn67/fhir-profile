@@ -45,13 +45,13 @@
     <nav class="col-md-2 sidebar py-3 ps-3 pe-2">
       <ul class="nav flex-column gap-1">
         <li class="nav-item">
-          <a class="nav-link" th:classappend="${#httpServletRequest.requestURI.startsWith('/admin/roles') ? 'active' : ''}"
+          <a class="nav-link" th:classappend="${currentUri != null and currentUri.startsWith('/admin/roles') ? 'active' : ''}"
              href="/admin/roles">
             <i class="bi bi-person-badge me-1"></i> Roles
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" th:classappend="${#httpServletRequest.requestURI.startsWith('/admin/users') ? 'active' : ''}"
+          <a class="nav-link" th:classappend="${currentUri != null and currentUri.startsWith('/admin/users') ? 'active' : ''}"
              href="/admin/users">
             <i class="bi bi-people me-1"></i> Users
           </a>

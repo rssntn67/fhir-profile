@@ -62,7 +62,7 @@ class RoleRestControllerIT {
 
     @Test
     @WithMockUser(roles = "SUPER_ADMIN")
-    void createRole_duplicateName_returns500() throws Exception {
+    void createRole_duplicateName_returns409() throws Exception {
         RoleDto dto = new RoleDto();
         dto.setName("SUPER_ADMIN"); // already exists (seeded)
         dto.setDescription("Duplicate");
@@ -70,15 +70,17 @@ class RoleRestControllerIT {
         mockMvc.perform(post("/api/admin/roles")
                    .contentType(MediaType.APPLICATION_JSON)
                    .content(objectMapper.writeValueAsString(dto)))
-               .andExpect(status().is5xxServerError());
+               .andExpect(status().isConflict())
+               .andExpect(jsonPath("$.error").exists());
     }
 
     @Test
     @WithMockUser(roles = "SUPER_ADMIN")
-    void deleteBuiltInRole_returns500() throws Exception {
+    void deleteBuiltInRole_returns409() throws Exception {
         Role superAdmin = roleRepository.findByName("SUPER_ADMIN").orElseThrow();
         mockMvc.perform(delete("/api/admin/roles/{id}", superAdmin.getId()))
-               .andExpect(status().is5xxServerError());
+               .andExpect(status().isConflict())
+               .andExpect(jsonPath("$.error").exists());
     }
 
     @Test

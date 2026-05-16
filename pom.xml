@@ -69,6 +69,11 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
     </dependency>
+    <!-- OAuth2 client: Authorization Code flow for browser-based admin UI login -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
+    </dependency>
     <!-- Thymeleaf for admin UI -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -151,6 +156,18 @@
               <artifactId>lombok</artifactId>
             </exclude>
           </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+            <include>**/*IT.java</include>
+          </includes>
         </configuration>
       </plugin>
 

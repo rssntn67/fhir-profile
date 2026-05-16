@@ -21,7 +21,7 @@ public class RoleService {
 
     @Transactional(readOnly = true)
     public List<Role> findAll() {
-        return roleRepository.findAll();
+        return roleRepository.findAllWithScopes();
     }
 
     @Transactional(readOnly = true)

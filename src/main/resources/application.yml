@@ -26,6 +26,17 @@ spring:
         jwt:
           issuer-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}
           jwk-set-uri: ${AAA_JWKS_URI:http://localhost:8180/realms/fhir/protocol/openid-connect/certs}
+      client:
+        registration:
+          keycloak:
+            client-id: fhir-server
+            authorization-grant-type: authorization_code
+            scope: openid,profile,email
+            redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
+        provider:
+          keycloak:
+            issuer-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}
+            user-name-attribute: preferred_username
 
 # ─── Custom RBAC + SMART configuration ─────────────────────────────────────
 fhir:

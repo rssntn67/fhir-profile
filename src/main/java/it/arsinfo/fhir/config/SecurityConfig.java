@@ -9,6 +9,11 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
+import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -16,14 +21,18 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
+import java.util.*;
+
 /**
- * Two independent filter chains:
+ * Three independent filter chains:
  *
- * Chain 1 (/fhir/**, /api/admin/**) — stateless JWT resource server.
+ * Chain 1 (/fhir/**, /api/**) — stateless JWT resource server.
  *   Fine-grained FHIR authorization is delegated to SmartAuthorizationInterceptor.
  *
- * Chain 2 (/admin/**) — same JWT bearer validation but session-aware so Thymeleaf
- *   CSRF tokens work correctly for HTML form submissions.
+ * Chain 2 (/admin/**, /login/**, /) — OAuth2 Authorization Code login.
+ *   Browser redirects to Keycloak login page; session stores the authenticated user.
+ *
+ * Chain 3 (actuator, swagger, h2-console) — completely open.
  */
 @Configuration
 @EnableWebSecurity
@@ -31,11 +40,9 @@ import org.springframework.security.web.util.matcher.OrRequestMatcher;
 public class SecurityConfig {
 
     private final KeycloakRolesConverter rolesConverter;
-    private final RbacProperties rbacProperties;
 
-    public SecurityConfig(KeycloakRolesConverter rolesConverter, RbacProperties rbacProperties) {
-        this.rolesConverter   = rolesConverter;
-        this.rbacProperties   = rbacProperties;
+    public SecurityConfig(KeycloakRolesConverter rolesConverter) {
+        this.rolesConverter = rolesConverter;
     }
 
     /**
@@ -67,23 +74,37 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** Chain 2: Admin UI — stateful session, CSRF enabled, JWT bearer auth. */
+    /**
+     * Chain 2: Admin UI — OAuth2 Authorization Code login via Keycloak.
+     * Unauthenticated requests are redirected to Keycloak's login page.
+     * After login, Keycloak redirects back and a session is established.
+     * Realm roles from the ID token are mapped to ROLE_X GrantedAuthority.
+     */
     @Bean
     @Order(2)
     public SecurityFilterChain adminUiFilterChain(HttpSecurity http) throws Exception {
         http
             .securityMatcher(new OrRequestMatcher(
                 new AntPathRequestMatcher("/admin/**"),
-                new AntPathRequestMatcher("/error/**")))
+                new AntPathRequestMatcher("/login/**"),
+                new AntPathRequestMatcher("/oauth2/**"),
+                new AntPathRequestMatcher("/error/**"),
+                new AntPathRequestMatcher("/")))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(new AntPathRequestMatcher("/error/**")).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/login/**")).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/oauth2/**")).permitAll()
+                .requestMatchers(new AntPathRequestMatcher("/")).permitAll()
                 .anyRequest().hasAnyRole("SUPER_ADMIN", "CLINICAL_ADMIN")
             )
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt.jwtAuthenticationConverter(rolesConverter))
+            .oauth2Login(login -> login
+                .defaultSuccessUrl("/admin/roles", true)
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userAuthoritiesMapper(keycloakAuthoritiesMapper()))
             )
             .exceptionHandling(ex -> ex
-                .accessDeniedPage("/error/403")
+                .accessDeniedHandler((request, response, denied) ->
+                        response.sendError(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN))
             );
         return http.build();
     }
@@ -102,6 +123,42 @@ public class SecurityConfig {
             .headers(h -> h.frameOptions(fo -> fo.sameOrigin()))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
+    }
+
+    /**
+     * Maps Keycloak realm roles from the OIDC ID token (realm_access.roles) to
+     * Spring Security ROLE_X GrantedAuthority objects for the admin UI session.
+     */
+    @Bean
+    public GrantedAuthoritiesMapper keycloakAuthoritiesMapper() {
+        return authorities -> {
+            Set<GrantedAuthority> mapped = new HashSet<>(authorities);
+            for (GrantedAuthority authority : authorities) {
+                Map<String, Object> claims = null;
+                if (authority instanceof OidcUserAuthority oidc) {
+                    claims = oidc.getIdToken().getClaims();
+                } else if (authority instanceof OAuth2UserAuthority oauth2) {
+                    claims = oauth2.getAttributes();
+                }
+                if (claims != null) {
+                    extractRealmRoles(claims).forEach(mapped::add);
+                }
+            }
+            return mapped;
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<SimpleGrantedAuthority> extractRealmRoles(Map<String, Object> claims) {
+        Object realmAccess = claims.get("realm_access");
+        if (!(realmAccess instanceof Map<?, ?> ra)) return Set.of();
+        Object roles = ra.get("roles");
+        if (!(roles instanceof List<?> roleList)) return Set.of();
+        Set<SimpleGrantedAuthority> result = new HashSet<>();
+        for (Object role : roleList) {
+            result.add(new SimpleGrantedAuthority("ROLE_" + role));
+        }
+        return result;
     }
 
     /**
