@@ -57,11 +57,15 @@
             <div class="mb-2">
               <label class="form-label fw-semibold small">Scope string <span class="text-danger">*</span></label>
               <input type="text" th:field="*{scopeString}" class="form-control form-control-sm font-monospace"
-                     placeholder="user/Patient.read" autocomplete="off"/>
+                     placeholder="user/Patient.read" autocomplete="off"
+                     list="scopeSuggestions"/>
+              <datalist id="scopeSuggestions">
+                <option th:each="s : ${scopeSuggestions}" th:value="${s}"></option>
+              </datalist>
               <div class="form-text">
                 Format: <code>&lt;context&gt;/&lt;Resource&gt;.&lt;perms&gt;</code><br/>
                 Context: <code>patient</code> | <code>user</code> | <code>system</code><br/>
-                Perms: <code>read</code> | <code>write</code> | <code>cruds</code> (any combo)
+                Perms: <code>read</code> | <code>write</code> | <code>cruds</code>
               </div>
             </div>
 

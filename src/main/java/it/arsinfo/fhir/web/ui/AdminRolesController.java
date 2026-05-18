@@ -13,10 +13,37 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Controller
 @RequestMapping("/admin/roles")
 @PreAuthorize("hasAnyRole('SUPER_ADMIN','CLINICAL_ADMIN')")
 public class AdminRolesController {
+
+    private static final List<String> SCOPE_SUGGESTIONS = buildScopeSuggestions();
+
+    private static List<String> buildScopeSuggestions() {
+        String[] contexts = {"patient", "user", "system"};
+        String[] resources = {
+            "*",
+            "Patient", "Practitioner", "PractitionerRole", "Organization", "Location",
+            "Observation", "Condition", "Procedure", "MedicationRequest", "MedicationStatement",
+            "DiagnosticReport", "Encounter", "AllergyIntolerance", "DocumentReference",
+            "ServiceRequest", "ImagingStudy", "CarePlan", "CareTeam", "Goal",
+            "Device", "RelatedPerson", "Coverage"
+        };
+        String[] perms = {"read", "write", "cruds"};
+        List<String> result = new ArrayList<>();
+        for (String ctx : contexts) {
+            for (String res : resources) {
+                for (String perm : perms) {
+                    result.add(ctx + "/" + res + "." + perm);
+                }
+            }
+        }
+        return List.copyOf(result);
+    }
 
     private final RoleService roleService;
     private final RoleScopeService roleScopeService;
@@ -99,6 +126,7 @@ public class AdminRolesController {
         model.addAttribute("scopes", roleScopeService.findByRole(id).stream()
                 .map(RoleScopeDto::from).toList());
         model.addAttribute("newScope", new RoleScopeDto());
+        model.addAttribute("scopeSuggestions", SCOPE_SUGGESTIONS);
         return "admin/roles/scopes";
     }
 
