@@ -33,6 +33,11 @@ public class AdminUsersController {
         return "admin/users/list";
     }
 
+    @GetMapping("/search")
+    public String searchUser(@RequestParam String subject) {
+        return "redirect:/admin/users/" + subject + "/roles";
+    }
+
     @GetMapping("/{userId}/roles")
     public String manageUserRoles(@PathVariable String userId, Model model) {
         model.addAttribute("userId", userId);

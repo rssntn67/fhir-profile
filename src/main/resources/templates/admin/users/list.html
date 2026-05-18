@@ -6,10 +6,21 @@
 
   <p class="text-muted">
     Users are identified by their JWT <code>sub</code> claim.
-    Click a subject to manage their role assignments.
+    Enter a Keycloak username or subject UUID below to open their role-assignment page.
   </p>
 
-  <div class="card shadow-sm">
+  <form th:action="@{/admin/users/search}" method="get" class="mb-4">
+    <div class="input-group" style="max-width: 480px;">
+      <input type="text" name="subject" class="form-control"
+             placeholder="Username or subject UUID" required
+             aria-label="User subject">
+      <button class="btn btn-primary" type="submit">
+        <i class="bi bi-search me-1"></i> Look up
+      </button>
+    </div>
+  </form>
+
+  <div th:if="${not #lists.isEmpty(subjects)}" class="card shadow-sm">
     <div class="card-body p-0">
       <table class="table table-hover mb-0">
         <thead class="table-dark">
@@ -31,15 +42,14 @@
               </a>
             </td>
           </tr>
-          <tr th:if="${#lists.isEmpty(subjects)}">
-            <td colspan="2" class="text-center text-muted py-4">
-              No user role assignments yet.
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
   </div>
+
+  <p th:if="${#lists.isEmpty(subjects)}" class="text-muted fst-italic mt-2">
+    No DB role assignments yet. Use the form above to manage any user's roles.
+  </p>
 
 </th:block>
 </body>
