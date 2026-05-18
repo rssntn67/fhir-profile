@@ -6,7 +6,7 @@
 
   <p class="text-muted">
     Users are identified by their JWT <code>sub</code> claim.
-    Enter a Keycloak username or subject UUID below to open their role-assignment page.
+    Enter a Keycloak username or subject UUID to open their role-assignment page.
   </p>
 
   <form th:action="@{/admin/users/search}" method="get" class="mb-4">
@@ -20,25 +20,28 @@
     </div>
   </form>
 
-  <div th:if="${not #lists.isEmpty(subjects)}" class="card shadow-sm">
+  <div th:if="${not #maps.isEmpty(userRoles)}" class="card shadow-sm">
     <div class="card-body p-0">
-      <table class="table table-hover mb-0">
+      <table class="table table-hover align-middle mb-0">
         <thead class="table-dark">
           <tr>
             <th>JWT Subject</th>
-            <th>Actions</th>
+            <th>Roles</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          <tr th:each="sub : ${subjects}">
+          <tr th:each="entry : ${userRoles}">
+            <td><code th:text="${entry.key}"></code></td>
             <td>
-              <i class="bi bi-person-circle me-1 text-secondary"></i>
-              <code th:text="${sub}"></code>
+              <span th:each="role : ${entry.value}"
+                    class="badge bg-secondary me-1"
+                    th:text="${role}"></span>
             </td>
-            <td>
-              <a th:href="@{/admin/users/{userId}/roles(userId=${sub})}"
+            <td class="text-end">
+              <a th:href="@{/admin/users/{userId}/roles(userId=${entry.key})}"
                  class="btn btn-outline-primary btn-sm">
-                <i class="bi bi-person-badge me-1"></i> Roles
+                <i class="bi bi-pencil me-1"></i> Edit roles
               </a>
             </td>
           </tr>
@@ -47,7 +50,7 @@
     </div>
   </div>
 
-  <p th:if="${#lists.isEmpty(subjects)}" class="text-muted fst-italic mt-2">
+  <p th:if="${#maps.isEmpty(userRoles)}" class="text-muted fst-italic mt-2">
     No DB role assignments yet. Use the form above to manage any user's roles.
   </p>
 

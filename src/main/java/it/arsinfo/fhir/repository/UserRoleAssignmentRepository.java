@@ -21,4 +21,7 @@ public interface UserRoleAssignmentRepository extends JpaRepository<UserRoleAssi
     @Query("SELECT DISTINCT a.subject FROM UserRoleAssignment a WHERE a.active = true " +
            "ORDER BY a.subject")
     List<String> findDistinctActiveSubjects();
+
+    @Query("SELECT a FROM UserRoleAssignment a JOIN FETCH a.role WHERE a.active = true ORDER BY a.subject")
+    List<UserRoleAssignment> findAllActive();
 }

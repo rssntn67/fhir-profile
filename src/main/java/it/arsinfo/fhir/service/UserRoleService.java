@@ -9,7 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -37,6 +40,15 @@ public class UserRoleService {
     @Transactional(readOnly = true)
     public List<String> findAllSubjects() {
         return assignmentRepository.findDistinctActiveSubjects();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, List<String>> findAllSubjectsWithRoles() {
+        return assignmentRepository.findAllActive().stream()
+                .collect(Collectors.groupingBy(
+                        a -> a.getSubject(),
+                        LinkedHashMap::new,
+                        Collectors.mapping(a -> a.getRole().getName(), Collectors.toList())));
     }
 
     public UserRoleAssignment assignRole(String subject, Long roleId, String assignedBy) {
