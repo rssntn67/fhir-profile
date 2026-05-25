@@ -4,18 +4,25 @@ import it.arsinfo.fhir.service.RoleService;
 import it.arsinfo.fhir.service.UserRoleService;
 import it.arsinfo.fhir.web.dto.RoleDto;
 import it.arsinfo.fhir.web.dto.UserRoleAssignmentDto;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.regex.Pattern;
 
 
 @Controller
 @RequestMapping("/admin/users")
 @PreAuthorize("hasAnyRole('SUPER_ADMIN','CLINICAL_ADMIN')")
 public class AdminUsersController {
+
+    // UUID, email, and common IdP subject formats — no path separators or control chars
+    private static final Pattern SAFE_SUBJECT = Pattern.compile("[a-zA-Z0-9._@+\\-]{1,256}");
 
     private final UserRoleService userRoleService;
     private final RoleService     roleService;
@@ -33,6 +40,9 @@ public class AdminUsersController {
 
     @GetMapping("/search")
     public String searchUser(@RequestParam String subject) {
+        if (!SAFE_SUBJECT.matcher(subject).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid subject identifier");
+        }
         return "redirect:/admin/users/" + subject + "/roles";
     }
 

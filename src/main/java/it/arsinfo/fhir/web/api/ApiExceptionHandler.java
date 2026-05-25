@@ -1,5 +1,6 @@
 package it.arsinfo.fhir.web.api;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -23,9 +24,9 @@ class ApiExceptionHandler {
         return Map.of("error", ex.getMessage());
     }
 
-    @ExceptionHandler(NoSuchElementException.class)
+    @ExceptionHandler({NoSuchElementException.class, EntityNotFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    Map<String, String> handleNotFound(NoSuchElementException ex) {
+    Map<String, String> handleNotFound(RuntimeException ex) {
         return Map.of("error", ex.getMessage());
     }
 }

@@ -85,6 +85,14 @@ class RoleRestControllerIT {
 
     @Test
     @WithMockUser(roles = "SUPER_ADMIN")
+    void getRole_nonExistentId_returns404() throws Exception {
+        mockMvc.perform(get("/api/admin/roles/99999"))
+               .andExpect(status().isNotFound())
+               .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    @WithMockUser(roles = "SUPER_ADMIN")
     void deleteCustomRole_returns204() throws Exception {
         // Create a custom role first
         Role custom = new Role();

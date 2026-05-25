@@ -87,6 +87,7 @@ public class SecurityConfig {
             .securityMatcher(new OrRequestMatcher(
                 new AntPathRequestMatcher("/admin/**"),
                 new AntPathRequestMatcher("/login/**"),
+                new AntPathRequestMatcher("/logout"),
                 new AntPathRequestMatcher("/oauth2/**"),
                 new AntPathRequestMatcher("/error/**"),
                 new AntPathRequestMatcher("/")))
@@ -101,6 +102,12 @@ public class SecurityConfig {
                 .defaultSuccessUrl("/admin/roles", true)
                 .userInfoEndpoint(userInfo -> userInfo
                     .userAuthoritiesMapper(keycloakAuthoritiesMapper()))
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/")
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID")
             )
             .exceptionHandling(ex -> ex
                 .accessDeniedHandler((request, response, denied) ->
