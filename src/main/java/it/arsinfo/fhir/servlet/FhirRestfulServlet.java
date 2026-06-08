@@ -1,6 +1,7 @@
 package it.arsinfo.fhir.servlet;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.provider.JpaSystemProvider;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.LoggingInterceptor;
@@ -41,6 +42,9 @@ public class FhirRestfulServlet extends RestfulServer {
 
         // Register all IResourceProvider beans from Spring context
         registerProviders(applicationContext.getBeansOfType(IResourceProvider.class).values());
+
+        // System provider handles $everything, _history, $validate, batch, transaction
+        registerProvider(applicationContext.getBean(JpaSystemProvider.class));
 
         // Request/response logging
         LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
