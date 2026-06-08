@@ -10,10 +10,13 @@ spring:
       enabled: true
       path: /h2-console
 
+  flyway:
+    enabled: false   # H2 schema managed by ddl-auto=create-drop
+
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: none      # Liquibase handles schema
+      ddl-auto: create-drop
     show-sql: false
 
 management:
@@ -27,4 +30,4 @@ logging:
     it.arsinfo.fhir: DEBUG
     ca.uhn.fhir: INFO
     org.springframework.security: DEBUG
-    org.liquibase: INFO
+    org.flywaydb: INFO

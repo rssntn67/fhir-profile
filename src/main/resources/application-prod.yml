@@ -13,8 +13,13 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: validate      # Liquibase owns schema; validate catches drift
+      ddl-auto: none
     show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
 
   thymeleaf:
     cache: true
@@ -54,6 +59,6 @@ logging:
     org.springframework.security: WARN
     org.springframework.web: WARN
     org.hibernate: WARN
-    org.liquibase: WARN
+    org.flywaydb: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
