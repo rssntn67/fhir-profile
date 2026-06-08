@@ -16,11 +16,8 @@ import org.springframework.core.env.Environment;
 @Import(JpaR4Config.class)
 public class FhirServerConfig {
 
-    /** Shared FHIR R4 context — thread-safe, expensive to create, must be a singleton. */
-    @Bean
-    public FhirContext fhirContext() {
-        return FhirContext.forR4();
-    }
+    // FhirContext bean is provided as @Primary by HAPI's FhirContextR4Config (imported via JpaR4Config).
+    // Do NOT declare a second one here — FhirContext is expensive to create and must be a true singleton.
 
     /**
      * JPA storage settings — replaces the old DaoConfig from HAPI < 7.x.
@@ -29,10 +26,9 @@ public class FhirServerConfig {
     @Bean
     public JpaStorageSettings jpaStorageSettings() {
         JpaStorageSettings settings = new JpaStorageSettings();
-        // Disable Hibernate Search / Lucene full-text indexing; use SQL search only
         settings.setHibernateSearchIndexFullText(false);
+        // Allow conditional deletes (e.g. DELETE /Patient?family=Test) — needed for admin operations
         settings.setAllowMultipleDelete(true);
-        // Cap results returned per query
         settings.setFetchSizeDefaultMaximum(200);
         settings.setResourceServerIdStrategy(JpaStorageSettings.IdStrategyEnum.SEQUENTIAL_NUMERIC);
         return settings;
@@ -40,15 +36,17 @@ public class FhirServerConfig {
 
     /**
      * Registers the HAPI FHIR servlet at /fhir/*.
+     * Spring Security filter chains run before it and populate SecurityContextHolder with the JWT.
      */
     @Bean
     public ServletRegistrationBean<FhirRestfulServlet> fhirServletRegistration(
+            FhirContext fhirContext,
             SmartAuthorizationInterceptor authorizationInterceptor,
             ApplicationContext applicationContext,
             Environment environment) {
 
         FhirRestfulServlet servlet = new FhirRestfulServlet(
-                authorizationInterceptor, applicationContext, environment);
+                fhirContext, authorizationInterceptor, applicationContext, environment);
 
         ServletRegistrationBean<FhirRestfulServlet> registration =
                 new ServletRegistrationBean<>(servlet, "/fhir/*");

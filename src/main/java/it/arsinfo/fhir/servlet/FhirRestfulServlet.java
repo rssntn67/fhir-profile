@@ -24,10 +24,11 @@ public class FhirRestfulServlet extends RestfulServer {
     private final ApplicationContext applicationContext;
     private final Environment environment;
 
-    public FhirRestfulServlet(SmartAuthorizationInterceptor authorizationInterceptor,
+    public FhirRestfulServlet(FhirContext fhirContext,
+                              SmartAuthorizationInterceptor authorizationInterceptor,
                               ApplicationContext applicationContext,
                               Environment environment) {
-        super(FhirContext.forR4());
+        super(fhirContext);
         this.authorizationInterceptor = authorizationInterceptor;
         this.applicationContext       = applicationContext;
         this.environment              = environment;
