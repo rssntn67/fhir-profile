@@ -26,6 +26,9 @@
     <hapi-fhir.version>8.0.0</hapi-fhir.version>
     <mapstruct.version>1.6.3</mapstruct.version>
     <springdoc.version>2.6.0</springdoc.version>
+    <!-- Hibernate 6.5.x requires jboss-logging >= 3.6.x (adds MethodHandles.Lookup overload).
+         hibernate-search-backend-elasticsearch 7.2.1 brings in 3.5.3 which is too old. -->
+    <jboss-logging.version>3.6.1.Final</jboss-logging.version>
   </properties>
 
   <dependencies>
