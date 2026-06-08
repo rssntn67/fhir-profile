@@ -76,9 +76,71 @@ public class SmartRuleBuilder {
             rules.addAll(scopeRules);
         }
 
+        rules.addAll(addValidateRules(ruleIndex));
+        rules.addAll(addEverythingRules(effectiveScopes, patientId, ruleIndex));
+        rules.addAll(addSystemHistoryRules(effectiveScopes, ruleIndex));
+
         // Catch-all deny — must be last
         rules.addAll(new RuleBuilder().denyAll("deny-all-unmatched").build());
         return rules;
+    }
+
+    private List<IAuthRule> addSystemHistoryRules(List<SmartScope> scopes, AtomicInteger idx) {
+        boolean hasSystemReadAll = scopes.stream()
+                .anyMatch(s -> s.context() == SmartContext.SYSTEM
+                        && s.isWildcard()
+                        && (s.allows(SmartPermission.READ) || s.allows(SmartPermission.SEARCH)));
+        if (!hasSystemReadAll) return List.of();
+
+        return new RuleBuilder()
+                .allow("r-" + idx.getAndIncrement() + "-system-history")
+                .operation()
+                .named("_history")
+                .atAnyLevel()
+                .andAllowAllResponses()
+                .build();
+    }
+
+    private List<IAuthRule> addEverythingRules(List<SmartScope> scopes,
+                                               Optional<String> patientId,
+                                               AtomicInteger idx) {
+        List<IAuthRule> rules = new ArrayList<>();
+        for (SmartScope scope : scopes) {
+            if (!scope.allows(SmartPermission.READ) && !scope.allows(SmartPermission.SEARCH)) {
+                continue;
+            }
+            boolean appliesToPatient = scope.isWildcard() || "Patient".equals(scope.resourceType());
+            if (!appliesToPatient) continue;
+
+            String prefix = "r-" + idx.getAndIncrement() + "-everything";
+            if (scope.context() == SmartContext.PATIENT && patientId.isPresent()) {
+                IIdType ref = new IdType("Patient", extractPatientIdValue(patientId.get()));
+                rules.addAll(new RuleBuilder()
+                        .allow(prefix + "-patient")
+                        .operation().named("$everything")
+                        .onInstance(ref)
+                        .andAllowAllResponses()
+                        .build());
+            } else if (scope.context() == SmartContext.USER || scope.context() == SmartContext.SYSTEM) {
+                rules.addAll(new RuleBuilder()
+                        .allow(prefix + "-user")
+                        .operation().named("$everything")
+                        .onAnyInstance()
+                        .andAllowAllResponses()
+                        .build());
+            }
+        }
+        return rules;
+    }
+
+    private List<IAuthRule> addValidateRules(AtomicInteger idx) {
+        return new RuleBuilder()
+                .allow("r-" + idx.getAndIncrement() + "-validate")
+                .operation()
+                .named("$validate")
+                .atAnyLevel()
+                .andAllowAllResponses()
+                .build();
     }
 
     // ── private: unbounded (SYSTEM / USER) ───────────────────────────────────

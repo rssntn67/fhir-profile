@@ -56,10 +56,13 @@ class SmartRuleBuilderTest {
         List<SmartScope> scopes = parser.parse("patient/Patient.read");
         List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.empty());
 
-        // Only metadata + denyAll — no compartment allows because patientId is absent
-        assertThat(rules).hasSize(2);
+        // metadata + denyAll, no compartment allow rules because patientId is absent
+        // ($validate is always added as a general operation rule)
         assertThat(rules.get(0).getName()).contains("metadata");
-        assertThat(rules.get(1).getName()).contains("deny");
+        assertThat(rules.get(rules.size() - 1).getName()).contains("deny");
+        boolean hasCompartmentAllow = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("patient-Patient"));
+        assertThat(hasCompartmentAllow).isFalse();
     }
 
     @Test
@@ -73,6 +76,58 @@ class SmartRuleBuilderTest {
     void buildRules_firstRuleIsAlwaysMetadata() {
         List<IAuthRule> rules = ruleBuilder.buildRules(List.of(), Optional.empty());
         assertThat(rules.get(0).getName()).contains("metadata");
+    }
+
+    @Test
+    void buildRules_systemHistoryAllowed_forSystemReadScope() {
+        List<SmartScope> scopes = parser.parse("system/*.read");
+        List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.empty());
+
+        boolean hasHistoryRule = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("history"));
+        assertThat(hasHistoryRule).isTrue();
+    }
+
+    @Test
+    void buildRules_systemHistoryNotAllowed_forUserReadScope() {
+        // user/*.read gives per-resource read but not system-level _history
+        List<SmartScope> scopes = parser.parse("user/*.read");
+        List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.empty());
+
+        boolean hasHistoryRule = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("history"));
+        assertThat(hasHistoryRule).isFalse();
+    }
+
+    @Test
+    void buildRules_everythingAllowed_whenUserHasPatientRead() {
+        List<SmartScope> scopes = parser.parse("user/Patient.read");
+        List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.empty());
+
+        boolean hasEverythingRule = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("everything"));
+        assertThat(hasEverythingRule).isTrue();
+    }
+
+    @Test
+    void buildRules_everythingAllowed_forPatientContextWithMatchingId() {
+        List<SmartScope> scopes = parser.parse("patient/Patient.read");
+        List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.of("Patient/p1"));
+
+        boolean hasEverythingRule = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("everything"));
+        assertThat(hasEverythingRule).isTrue();
+    }
+
+    @Test
+    void buildRules_validateOperationAllowed_regardlessOfScopes() {
+        // $validate does not read or write data — always allow for any authenticated user
+        List<SmartScope> scopes = parser.parse("user/Patient.read");
+        List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.empty());
+
+        boolean hasValidateRule = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("validate"));
+        assertThat(hasValidateRule).isTrue();
     }
 
     @Test
