@@ -90,13 +90,22 @@ class SmartRuleBuilderTest {
 
     @Test
     void buildRules_systemHistoryNotAllowed_forUserReadScope() {
-        // user/*.read gives per-resource read but not system-level _history
+        // user/*.read must NOT grant an ALLOW rule for system-level _history.
+        // An explicit deny rule is expected to prevent the general "read all resources" rule
+        // from leaking through to the server-level _history endpoint.
         List<SmartScope> scopes = parser.parse("user/*.read");
         List<IAuthRule> rules = ruleBuilder.buildRules(scopes, Optional.empty());
 
-        boolean hasHistoryRule = rules.stream()
-                .anyMatch(r -> r.getName() != null && r.getName().contains("history"));
-        assertThat(hasHistoryRule).isFalse();
+        boolean hasSystemHistoryAllow = rules.stream()
+                .anyMatch(r -> r.getName() != null
+                        && r.getName().contains("system-history")
+                        && !r.getName().contains("deny"));
+        assertThat(hasSystemHistoryAllow).isFalse();
+
+        // And there must be an explicit deny to protect the endpoint
+        boolean hasDenyRule = rules.stream()
+                .anyMatch(r -> r.getName() != null && r.getName().contains("deny-server-history"));
+        assertThat(hasDenyRule).isTrue();
     }
 
     @Test

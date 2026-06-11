@@ -1,11 +1,22 @@
 package it.arsinfo.fhir.interceptor;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.interceptor.api.Pointcut;
+import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.server.interceptor.auth.AuthorizationFlagsEnum;
+import ca.uhn.fhir.rest.server.interceptor.auth.AuthorizationInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.auth.IAuthRule;
+import ca.uhn.fhir.rest.server.interceptor.auth.IRuleApplier;
+import ca.uhn.fhir.rest.server.interceptor.auth.PolicyEnum;
 import ca.uhn.fhir.rest.server.interceptor.auth.RuleBuilder;
 import it.arsinfo.fhir.security.jwt.SmartContext;
 import it.arsinfo.fhir.security.jwt.SmartPermission;
 import it.arsinfo.fhir.security.jwt.SmartScope;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IIdType;
+
+import java.util.Set;
 import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.IdType;
 import org.slf4j.Logger;
@@ -65,6 +76,12 @@ public class SmartRuleBuilder {
                 .metadata()
                 .build());
 
+        // System history and validate rules are added BEFORE per-scope read rules so that
+        // the server-level _history deny (for non-system scopes) fires before the general
+        // "read all resources" rule that would otherwise match GET /fhir/_history.
+        rules.addAll(addValidateRules(ruleIndex));
+        rules.addAll(addSystemHistoryRules(effectiveScopes, ruleIndex));
+
         for (SmartScope scope : effectiveScopes) {
             List<IAuthRule> scopeRules = switch (scope.context()) {
                 case SYSTEM, USER -> buildUnboundedRules(scope, ruleIndex);
@@ -76,9 +93,7 @@ public class SmartRuleBuilder {
             rules.addAll(scopeRules);
         }
 
-        rules.addAll(addValidateRules(ruleIndex));
         rules.addAll(addEverythingRules(effectiveScopes, patientId, ruleIndex));
-        rules.addAll(addSystemHistoryRules(effectiveScopes, ruleIndex));
 
         // Catch-all deny — must be last
         rules.addAll(new RuleBuilder().denyAll("deny-all-unmatched").build());
@@ -90,15 +105,36 @@ public class SmartRuleBuilder {
                 .anyMatch(s -> s.context() == SmartContext.SYSTEM
                         && s.isWildcard()
                         && (s.allows(SmartPermission.READ) || s.allows(SmartPermission.SEARCH)));
-        if (!hasSystemReadAll) return List.of();
 
-        return new RuleBuilder()
-                .allow("r-" + idx.getAndIncrement() + "-system-history")
-                .operation()
-                .named("_history")
-                .atAnyLevel()
-                .andAllowAllResponses()
-                .build();
+        if (hasSystemReadAll) {
+            return new RuleBuilder()
+                    .allow("r-" + idx.getAndIncrement() + "-system-history")
+                    .operation()
+                    .named("_history")
+                    .atAnyLevel()
+                    .andAllowAllResponses()
+                    .build();
+        }
+
+        // Explicitly deny server-level _history for non-system scopes. The RuleBuilder
+        // operation() API does not reliably match HISTORY_SYSTEM requests, so we use
+        // a custom IAuthRule that inspects the RestOperationTypeEnum directly.
+        String ruleName = "r-" + idx.getAndIncrement() + "-deny-server-history";
+        IAuthRule denySystemHistory = new IAuthRule() {
+            @Override
+            public AuthorizationInterceptor.Verdict applyRule(
+                    RestOperationTypeEnum op, RequestDetails rd,
+                    IBaseResource inRes, IIdType inId, IBaseResource outRes,
+                    IRuleApplier applier, Set<AuthorizationFlagsEnum> flags, Pointcut ptc) {
+                if (op == RestOperationTypeEnum.HISTORY_SYSTEM) {
+                    return new AuthorizationInterceptor.Verdict(PolicyEnum.DENY, this);
+                }
+                return null;
+            }
+            @Override
+            public String getName() { return ruleName; }
+        };
+        return List.of(denySystemHistory);
     }
 
     private List<IAuthRule> addEverythingRules(List<SmartScope> scopes,

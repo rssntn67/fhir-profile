@@ -2,6 +2,11 @@ spring:
   application:
     name: fhir-profile-server
 
+  # HAPI FHIR JPA has a known circular dependency between searchParamRegistry and
+  # inMemoryResourceMatcher. Allow Spring to resolve it via its proxy-based mechanism.
+  main:
+    allow-circular-references: true
+
   jpa:
     open-in-view: false
     properties:
