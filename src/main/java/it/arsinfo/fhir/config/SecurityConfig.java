@@ -12,13 +12,17 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
@@ -41,9 +45,12 @@ import java.util.*;
 public class SecurityConfig {
 
     private final KeycloakRolesConverter rolesConverter;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
-    public SecurityConfig(KeycloakRolesConverter rolesConverter) {
+    public SecurityConfig(KeycloakRolesConverter rolesConverter,
+                          ClientRegistrationRepository clientRegistrationRepository) {
         this.rolesConverter = rolesConverter;
+        this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     /**
@@ -110,7 +117,7 @@ public class SecurityConfig {
             )
             .logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/")
+                .logoutSuccessHandler(oidcLogoutSuccessHandler())
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
             )
@@ -119,6 +126,18 @@ public class SecurityConfig {
                         response.sendError(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN))
             );
         return http.build();
+    }
+
+    /**
+     * OIDC RP-Initiated Logout: after invalidating the local session, redirect the
+     * browser to Keycloak's end-session endpoint so the SSO session is also terminated.
+     * Without this, Keycloak re-authenticates the user silently on the next /admin request.
+     */
+    private LogoutSuccessHandler oidcLogoutSuccessHandler() {
+        OidcClientInitiatedLogoutSuccessHandler handler =
+                new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
+        handler.setPostLogoutRedirectUri("{baseUrl}/");
+        return handler;
     }
 
     /** Chain 3: actuator + static resources — completely open. */
