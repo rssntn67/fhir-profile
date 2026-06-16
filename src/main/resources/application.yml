@@ -28,7 +28,9 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/keycloak"
         provider:
           keycloak:
-            issuer-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}
+            # issuer-uri is NOT set here: it triggers eager OIDC discovery at startup
+            # which fails if Keycloak is not running. Each profile provides explicit
+            # endpoint URIs instead (application-dev.yml / application-prod.yml).
             user-name-attribute: preferred_username
 
 fhir:

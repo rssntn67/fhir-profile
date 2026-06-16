@@ -147,6 +147,11 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <!-- Forward the active Maven profile's spring.profiles.active property to the JVM
+               so that `mvn spring-boot:run` uses the dev profile and `-Pprod` uses prod. -->
+          <profiles>
+            <profile>${spring.profiles.active}</profile>
+          </profiles>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>

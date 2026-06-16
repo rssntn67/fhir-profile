@@ -1,4 +1,16 @@
 spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            # Explicit endpoints avoid OIDC discovery at startup so the server starts
+            # even when Keycloak (docker-compose) is not running locally.
+            authorization-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}/protocol/openid-connect/auth
+            token-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}/protocol/openid-connect/token
+            user-info-uri: ${AAA_ISSUER_URI:http://localhost:8180/realms/fhir}/protocol/openid-connect/userinfo
+            jwk-set-uri: ${AAA_JWKS_URI:http://localhost:8180/realms/fhir/protocol/openid-connect/certs}
+
   datasource:
     url: jdbc:h2:mem:fhirdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver

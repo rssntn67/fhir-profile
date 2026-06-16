@@ -1,4 +1,14 @@
 spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            authorization-uri: ${AAA_ISSUER_URI}/protocol/openid-connect/auth
+            token-uri: ${AAA_ISSUER_URI}/protocol/openid-connect/token
+            user-info-uri: ${AAA_ISSUER_URI}/protocol/openid-connect/userinfo
+            jwk-set-uri: ${AAA_JWKS_URI}
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
