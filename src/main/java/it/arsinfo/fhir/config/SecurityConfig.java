@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
@@ -98,6 +99,10 @@ public class SecurityConfig {
                 .requestMatchers(new AntPathRequestMatcher("/")).permitAll()
                 .anyRequest().hasAnyRole("SUPER_ADMIN", "CLINICAL_ADMIN")
             )
+            // Spring Security 6 lazy-loads the CSRF token by default; Thymeleaf's th:action
+            // needs it eagerly bound to the request attribute so the hidden _csrf field is
+            // injected into the logout form (and any other POST form in the admin UI).
+            .csrf(csrf -> csrf.csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
             .oauth2Login(login -> login
                 .defaultSuccessUrl("/admin/roles", true)
                 .userInfoEndpoint(userInfo -> userInfo
