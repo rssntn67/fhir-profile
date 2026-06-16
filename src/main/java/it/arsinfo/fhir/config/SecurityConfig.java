@@ -12,7 +12,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUserAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2UserAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -21,10 +23,9 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
-import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 
@@ -45,12 +46,14 @@ import java.util.*;
 public class SecurityConfig {
 
     private final KeycloakRolesConverter rolesConverter;
-    private final ClientRegistrationRepository clientRegistrationRepository;
 
-    public SecurityConfig(KeycloakRolesConverter rolesConverter,
-                          ClientRegistrationRepository clientRegistrationRepository) {
+    // authorization-uri = .../protocol/openid-connect/auth
+    // end-session-uri   = .../protocol/openid-connect/logout  (derived below)
+    @Value("${spring.security.oauth2.client.provider.keycloak.authorization-uri}")
+    private String keycloakAuthorizationUri;
+
+    public SecurityConfig(KeycloakRolesConverter rolesConverter) {
         this.rolesConverter = rolesConverter;
-        this.clientRegistrationRepository = clientRegistrationRepository;
     }
 
     /**
@@ -129,15 +132,39 @@ public class SecurityConfig {
     }
 
     /**
-     * OIDC RP-Initiated Logout: after invalidating the local session, redirect the
-     * browser to Keycloak's end-session endpoint so the SSO session is also terminated.
-     * Without this, Keycloak re-authenticates the user silently on the next /admin request.
+     * OIDC RP-Initiated Logout.
+     *
+     * Redirects the browser to Keycloak's end-session endpoint so the SSO session
+     * is also terminated. We cannot use OidcClientInitiatedLogoutSuccessHandler
+     * because we skip OIDC discovery (no issuer-uri) to allow the server to start
+     * without Keycloak running. Instead, we derive the end-session URI from the
+     * configured authorization-uri and attach the id_token_hint manually.
      */
     private LogoutSuccessHandler oidcLogoutSuccessHandler() {
-        OidcClientInitiatedLogoutSuccessHandler handler =
-                new OidcClientInitiatedLogoutSuccessHandler(clientRegistrationRepository);
-        handler.setPostLogoutRedirectUri("{baseUrl}/");
-        return handler;
+        // Derive end-session URI: replace /auth with /logout at the end of the path
+        String endSessionUri = keycloakAuthorizationUri.replace(
+                "/protocol/openid-connect/auth",
+                "/protocol/openid-connect/logout");
+
+        return (request, response, authentication) -> {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(endSessionUri);
+
+            // Attach id_token_hint so Keycloak terminates the session without a prompt
+            if (authentication instanceof OAuth2AuthenticationToken token
+                    && token.getPrincipal() instanceof OidcUser oidcUser
+                    && oidcUser.getIdToken() != null) {
+                builder.queryParam("id_token_hint", oidcUser.getIdToken().getTokenValue());
+            }
+
+            // Tell Keycloak where to redirect after logout
+            String postLogoutUri = request.getScheme() + "://" + request.getServerName()
+                    + (request.getServerPort() != 80 && request.getServerPort() != 443
+                            ? ":" + request.getServerPort() : "")
+                    + "/";
+            builder.queryParam("post_logout_redirect_uri", postLogoutUri);
+
+            response.sendRedirect(builder.toUriString());
+        };
     }
 
     /** Chain 3: actuator + static resources — completely open. */
